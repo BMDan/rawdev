@@ -26,7 +26,7 @@ fi
 if [[ "$DEV" =~ ^/dev/mapper ]]; then # LVS?
   lvs -o +devices "$DEV" | awk 'NR > 1 {print $NF}' | while read -r subdev; do
     subdev=$(echo "$subdev" | sed 's/([0-9][0-9]*)$//') # Strip "(0)" and similar.
-    $0 "$subdev" || exit $?
+    $0 "$(realpath "$subdev")" || exit $?
   done
   exit 0
 fi
