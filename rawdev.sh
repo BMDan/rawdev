@@ -38,6 +38,13 @@ if [[ "$DEV" =~ /dev/md ]]; then # MD?
   exit 0
 fi
 
+if [[ "$DEV" =~ /dev/dm- ]]; then # DM?
+  dmsetup deps "$DEV" | sed 's#.*: ##g; s#) (#)\n(#g; s#[(,)]##g;' | while read -r maj min; do
+    $0 "$(udevadm info -rq name /sys/dev/block/"${maj}":"${min}")"
+  done
+  exit 0
+fi
+
 # De-partition-ize
 if [ "${DEV:0:5}" == "/dev/" ] && [ -e "/sys/class/block/$(basename "$DEV")/partition" ]; then
   # nvme and nbd devices, amongst others, use the "abcXXpYY" format.  Let's try that first.
