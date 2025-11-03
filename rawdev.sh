@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -ue
 
 usage() {
   echo "Usage: $0 <device or path>" >&2
@@ -24,7 +24,7 @@ if [ "${DEV:0:1}" != "/" ]; then # We delved too deep!
 fi
 
 if [[ "$DEV" =~ ^/dev/mapper ]]; then # LVS?
-  lvs -o +devices "$DEV" | awk 'NR > 1 {print $NF}' | while read subdev; do
+  lvs -o +devices "$DEV" | awk 'NR > 1 {print $NF}' | while read -r subdev; do
     subdev=$(echo "$subdev" | sed 's/([0-9][0-9]*)$//') # Strip "(0)" and similar.
     $0 "$subdev" || exit $?
   done
@@ -32,14 +32,14 @@ if [[ "$DEV" =~ ^/dev/mapper ]]; then # LVS?
 fi
 
 if [[ "$DEV" =~ /dev/md ]]; then # MD?
-  mdadm --detail "$DEV" | awk 'p==1 {print $NF} $2 == "Major" && $3 == "Minor" {p=1}' | while read subdev; do
+  mdadm --detail "$DEV" | awk 'p==1 {print $NF} $2 == "Major" && $3 == "Minor" {p=1}' | while read -r subdev; do
     $0 "$subdev" || exit $?
   done
   exit 0
 fi
 
 # De-partition-ize
-if [ "${DEV:0:5}" == "/dev/" -a -e "/sys/class/block/$(basename "$DEV")/partition" ]; then
+if [ "${DEV:0:5}" == "/dev/" ] && [ -e "/sys/class/block/$(basename "$DEV")/partition" ]; then
   # nvme and nbd devices, amongst others, use the "abcXXpYY" format.  Let's try that first.
   maybedev="$(echo "$DEV" | sed '/[0-9]p[0-9][0-9]*$/s/p[0-9][0-9]*$//')"
   if [ -e "/sys/class/block/$(basename "$maybedev")/device" ]; then
